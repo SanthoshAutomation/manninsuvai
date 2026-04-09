@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../config/app_config.dart';
 import '../../models/product.dart';
 import '../../providers/products_provider.dart';
 import '../../theme/app_theme.dart';
@@ -18,6 +22,55 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   ProductCategory? _filterCategory;
   bool _isSaving = false;
+
+  // Web stats
+  int? _visitsToday;
+  int? _visitsTotal;
+  int? _notifSubscribers;
+  bool _statsLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStats();
+  }
+
+  Future<void> _fetchStats() async {
+    setState(() => _statsLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final readUrl = prefs.getString(AppConfigKeys.productsReadUrl) ?? '';
+      final apiKey  = prefs.getString(AppConfigKeys.serverApiKey) ?? '';
+      if (readUrl.isEmpty || apiKey.isEmpty) {
+        setState(() => _statsLoading = false);
+        return;
+      }
+
+      final statsUrl = readUrl.contains('api.php')
+          ? '${readUrl}?action=stats'
+          : readUrl;
+
+      final response = await http.get(
+        Uri.parse(statsUrl),
+        headers: {'Authorization': 'Bearer $apiKey'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        if (mounted) {
+          setState(() {
+            _visitsToday       = data['web_visits_today']         as int?;
+            _visitsTotal       = data['web_visits_total']         as int?;
+            _notifSubscribers  = data['notification_subscribers'] as int?;
+          });
+        }
+      }
+    } catch (_) {
+      // Stats are optional — silent failure.
+    } finally {
+      if (mounted) setState(() => _statsLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +110,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           return Column(
             children: [
               _buildSummaryBar(provider),
+              _buildStatsCard(),
               _buildCategoryFilter(),
               Expanded(
                 child: products.isEmpty
@@ -103,6 +157,73 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildStatsCard() {
+    final String today = _statsLoading
+        ? '...'
+        : (_visitsToday == null ? '—' : '$_visitsToday');
+    final String total = _statsLoading
+        ? '...'
+        : (_visitsTotal == null ? '—' : '$_visitsTotal');
+    final String subs = _statsLoading
+        ? '...'
+        : (_notifSubscribers == null ? '—' : '$_notifSubscribers');
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.secondaryLighter),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _statItem('👁', 'Today', today)),
+          _statDivider(),
+          Expanded(child: _statItem('📊', 'Total visits', total)),
+          _statDivider(),
+          Expanded(child: _statItem('🔔', 'Subscribers', subs)),
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, size: 18, color: AppColors.textLight),
+            onPressed: _fetchStats,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statItem(String emoji, String label, String value) {
+    return Column(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 20)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppColors.secondary,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(fontSize: 10, color: AppColors.textLight),
+        ),
+      ],
+    );
+  }
+
+  Widget _statDivider() {
+    return Container(width: 1, height: 40, color: AppColors.secondaryLighter,
+        margin: const EdgeInsets.symmetric(horizontal: 8));
   }
 
   Widget _buildSummaryBar(ProductsProvider provider) {

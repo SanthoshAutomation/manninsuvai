@@ -45,6 +45,8 @@ class NotificationService {
         // Instead, get the browser's push token and register it with the
         // server so send_notification.php can deliver to web users too.
         await _registerWebToken(messaging);
+        // Count this web visit in the server's stats.
+        await _pingServer();
       } else {
         // Android: subscribe to shared topic — no individual tokens stored.
         await messaging.subscribeToTopic(_kFcmTopic);
@@ -85,6 +87,27 @@ class NotificationService {
     } catch (e) {
       // Best-effort: registration failure does not affect app functionality.
       debugPrint('Web token registration skipped: $e');
+    }
+  }
+
+  // ─── Visit ping ──────────────────────────────────────────────────────────
+
+  /// Records a web app visit on the server (anonymous count only).
+  static Future<void> _pingServer() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final writeUrl = prefs.getString(AppConfigKeys.productsWriteUrl) ?? '';
+      if (writeUrl.isEmpty) return;
+
+      final pingUrl = writeUrl.contains('api.php')
+          ? '${writeUrl}?action=ping'
+          : writeUrl;
+
+      await http
+          .post(Uri.parse(pingUrl))
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Best-effort — never affects app functionality.
     }
   }
 

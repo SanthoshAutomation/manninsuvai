@@ -17,6 +17,7 @@
 $SECRET_KEY  = 'CHANGE_THIS_TO_A_RANDOM_SECRET';
 $DATA_FILE   = __DIR__ . '/products.json';
 $TOKENS_FILE = __DIR__ . '/web_tokens.json';
+$STATS_FILE  = __DIR__ . '/stats.json';
 
 // ── CORS headers (allow Flutter web & mobile) ─────────────────────────────
 header('Access-Control-Allow-Origin: *');
@@ -29,6 +30,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 header('Content-Type: application/json; charset=UTF-8');
+
+// ── Visit ping (no auth — called by Flutter web app on every startup) ────────
+// Increments today's visit count and total visit count in stats.json.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'ping') {
+    $today = date('Y-m-d');
+    $stats = file_exists($STATS_FILE)
+        ? (json_decode(file_get_contents($STATS_FILE), true) ?? [])
+        : [];
+
+    // Reset daily counter if the date has changed
+    if (($stats['today_date'] ?? '') !== $today) {
+        $stats['today_date']  = $today;
+        $stats['today_visits'] = 0;
+    }
+
+    $stats['today_visits'] = ($stats['today_visits'] ?? 0) + 1;
+    $stats['total_visits']  = ($stats['total_visits']  ?? 0) + 1;
+
+    file_put_contents($STATS_FILE, json_encode($stats));
+    echo json_encode(['success' => true]);
+    exit;
+}
+
+// ── Stats (admin only — requires Authorization header) ────────────────────────
+// Returns web visit counts + notification subscriber count.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'stats') {
+    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if ($auth !== 'Bearer ' . $SECRET_KEY) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+
+    $stats = file_exists($STATS_FILE)
+        ? (json_decode(file_get_contents($STATS_FILE), true) ?? [])
+        : [];
+
+    $today = date('Y-m-d');
+    $todayVisits = ($stats['today_date'] ?? '') === $today
+        ? ($stats['today_visits'] ?? 0)
+        : 0;
+
+    $tokens = file_exists($TOKENS_FILE)
+        ? (json_decode(file_get_contents($TOKENS_FILE), true) ?? [])
+        : [];
+
+    echo json_encode([
+        'web_visits_today'        => $todayVisits,
+        'web_visits_total'        => $stats['total_visits'] ?? 0,
+        'notification_subscribers' => count($tokens),
+    ]);
+    exit;
+}
 
 // ── Web push token registration (no auth — any browser can register) ──────
 // Called automatically by the Flutter web app when a user opens the site.
