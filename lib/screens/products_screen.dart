@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/product.dart';
-import '../data/products_data.dart';
+import '../providers/products_provider.dart';
 import '../widgets/product_card.dart';
 import 'product_detail_screen.dart';
 
@@ -57,19 +58,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.dispose();
   }
 
-  List<Product> get _filteredProducts {
-    if (_searchQuery.isNotEmpty) {
-      return ProductsData.search(_searchQuery);
-    }
-    if (_selectedCategory != null) {
-      return ProductsData.getByCategory(_selectedCategory!);
-    }
-    return ProductsData.products;
+  List<Product> _getFilteredProducts(ProductsProvider provider) {
+    if (_searchQuery.isNotEmpty) return provider.search(_searchQuery);
+    if (_selectedCategory != null) return provider.getByCategory(_selectedCategory!);
+    return provider.products;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Check if used as standalone screen (pushed via Navigator)
     final isStandalone = widget.initialCategory != null || widget.initialProduct != null;
 
     return Scaffold(
@@ -107,10 +103,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         automaticallyImplyLeading: isStandalone,
         actions: [
           IconButton(
-            icon: Icon(
-              _isSearching ? Icons.close : Icons.search,
-              color: Colors.white,
-            ),
+            icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.white),
             onPressed: () {
               setState(() {
                 _isSearching = !_isSearching;
@@ -123,11 +116,61 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildCategoryFilter(),
-          Expanded(child: _buildProductGrid()),
-        ],
+      body: Consumer<ProductsProvider>(
+        builder: (ctx, provider, _) {
+          if (provider.isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.secondary),
+            );
+          }
+          if (provider.state == LoadState.error) {
+            return _buildError(provider);
+          }
+
+          final products = _getFilteredProducts(provider);
+          return Column(
+            children: [
+              _buildCategoryFilter(),
+              Expanded(child: _buildProductGrid(products, provider)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildError(ProductsProvider provider) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('⚠️', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 16),
+            Text(
+              'Could not load products',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              provider.errorMessage,
+              style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMedium),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => provider.loadProducts(),
+              icon: const Icon(Icons.refresh),
+              label: Text('Retry', style: GoogleFonts.poppins()),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -178,9 +221,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  Widget _buildProductGrid() {
-    final products = _filteredProducts;
-
+  Widget _buildProductGrid(List<Product> products, ProductsProvider provider) {
     if (products.isEmpty) {
       return Center(
         child: Column(
@@ -196,34 +237,30 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 color: AppColors.textMedium,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Try searching with different keywords',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: AppColors.textLight,
-              ),
-            ),
           ],
         ),
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.72,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: products.length,
-      itemBuilder: (context, index) => ProductCard(
-        product: products[index],
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(product: products[index]),
+    return RefreshIndicator(
+      onRefresh: () => provider.loadProducts(),
+      color: AppColors.secondary,
+      child: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.72,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: products.length,
+        itemBuilder: (context, index) => ProductCard(
+          product: products[index],
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProductDetailScreen(product: products[index]),
+            ),
           ),
         ),
       ),

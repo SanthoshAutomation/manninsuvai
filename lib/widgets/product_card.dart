@@ -48,33 +48,43 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildImageSection(),
-            _buildInfoSection(context),
-          ],
+      onTap: product.inStock ? onTap : null,
+      child: Opacity(
+        opacity: product.inStock ? 1.0 : 0.6,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildImageSection(),
+              _buildInfoSection(context),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildImageSection() {
+    // Find the best discount to show on the card
+    final maxDiscount = product.variants.fold<double>(
+      0,
+      (max, v) => v.discountPercent > max ? v.discountPercent : max,
+    );
+
     return Stack(
       children: [
+        // Background
         Container(
           height: 130,
           decoration: BoxDecoration(
@@ -88,7 +98,37 @@ class ProductCard extends StatelessWidget {
             ),
           ),
         ),
-        if (product.badge != null)
+
+        // Out of stock overlay
+        if (!product.inStock)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.4),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'OUT OF STOCK',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // Badge (Bestseller, Popular, etc.)
+        if (product.badge != null && product.inStock)
           Positioned(
             top: 10,
             left: 10,
@@ -108,7 +148,31 @@ class ProductCard extends StatelessWidget {
               ),
             ),
           ),
-        if (product.isPreBooking)
+
+        // Discount badge
+        if (maxDiscount > 0 && product.inStock)
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${maxDiscount.toStringAsFixed(0)}% OFF',
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+
+        // Pre-booking chip
+        if (product.isPreBooking && product.inStock)
           Positioned(
             top: 10,
             right: 10,
@@ -151,19 +215,17 @@ class ProductCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             product.subtitle,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: AppColors.textLight,
-            ),
+            style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textLight),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _buildPriceText(),
-              _buildAddButton(context),
+              _buildPriceWidget(),
+              if (product.inStock) _buildAddButton(context),
             ],
           ),
         ],
@@ -171,8 +233,8 @@ class ProductCard extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceText() {
-    if (product.minPrice <= 0) {
+  Widget _buildPriceWidget() {
+    if (product.variants.isEmpty || product.minOriginalPrice <= 0) {
       return Text(
         'Contact Us',
         style: GoogleFonts.poppins(
@@ -183,34 +245,38 @@ class ProductCard extends StatelessWidget {
       );
     }
 
-    if (product.variants.length == 1) {
-      return Text(
-        '₹${product.minPrice.toStringAsFixed(0)}',
-        style: GoogleFonts.poppins(
-          fontSize: 15,
-          fontWeight: FontWeight.w800,
-          color: AppColors.secondary,
-        ),
-      );
-    }
+    final hasDiscount = product.hasAnyDiscount;
+    final effectiveMin = product.minPrice;
+    final originalMin = product.minOriginalPrice;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'From',
-          style: GoogleFonts.poppins(
-            fontSize: 10,
-            color: AppColors.textLight,
+        if (hasDiscount)
+          Text(
+            '₹${originalMin.toStringAsFixed(0)}',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: AppColors.textLight,
+              decoration: TextDecoration.lineThrough,
+            ),
           ),
-        ),
-        Text(
-          '₹${product.minPrice.toStringAsFixed(0)}',
-          style: GoogleFonts.poppins(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: AppColors.secondary,
-          ),
+        Row(
+          children: [
+            if (product.variants.length > 1)
+              Text(
+                'From ',
+                style: GoogleFonts.poppins(fontSize: 10, color: AppColors.textLight),
+              ),
+            Text(
+              '₹${effectiveMin.toStringAsFixed(0)}',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: hasDiscount ? Colors.red.shade700 : AppColors.secondary,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -220,7 +286,7 @@ class ProductCard extends StatelessWidget {
     return Consumer<CartProvider>(
       builder: (ctx, cart, _) {
         final firstPricedVariant = product.variants.firstWhere(
-          (v) => v.price > 0,
+          (v) => v.price > 0 && v.inStock,
           orElse: () => product.variants.first,
         );
         final isInCart = cart.isInCart(product.id, firstPricedVariant.weight);
@@ -231,17 +297,12 @@ class ProductCard extends StatelessWidget {
               cart.addItem(product, firstPricedVariant);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(
-                    'Added to cart!',
-                    style: GoogleFonts.poppins(fontSize: 13),
-                  ),
+                  content: Text('Added to cart!', style: GoogleFonts.poppins(fontSize: 13)),
                   backgroundColor: AppColors.secondary,
                   behavior: SnackBarBehavior.floating,
                   duration: const Duration(seconds: 1),
                   margin: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               );
             }

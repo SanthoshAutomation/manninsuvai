@@ -6,7 +6,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:badges/badges.dart' as badges;
 import '../theme/app_theme.dart';
 import '../models/product.dart';
-import '../data/products_data.dart';
+import '../providers/products_provider.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/product_card.dart';
 import '../widgets/category_card.dart';
@@ -31,40 +31,35 @@ class _HomeScreenState extends State<HomeScreen> {
       'subtitle': '30+ Traditional Rice Varieties & More',
       'emoji': '🍚',
       'color': AppColors.secondaryLighter,
-      'price': 'From ₹480',
-      'category': ProductCategory.healthMix,
+      'label': 'From ₹480',
     },
     {
       'title': 'Multi Millets Mix',
       'subtitle': 'Ancient Grains for Modern Wellness',
       'emoji': '🌾',
       'color': AppColors.amberLight,
-      'price': 'From ₹455',
-      'category': ProductCategory.healthMix,
+      'label': 'From ₹455',
     },
     {
       'title': 'Natural Beauty Care',
       'subtitle': 'Azhagiya Amudham - Traditional Herbal',
       'emoji': '🌸',
       'color': AppColors.pinkLight,
-      'price': 'Explore Now',
-      'category': ProductCategory.beauty,
+      'label': 'Explore Now',
     },
     {
       'title': 'Premium Tea',
       'subtitle': 'From 7th Heaven, Valparai',
       'emoji': '🍵',
       'color': Color(0xFFF3E5D8),
-      'price': 'From ₹210/kg',
-      'category': ProductCategory.teaBeverages,
+      'label': 'From ₹210/kg',
     },
     {
       'title': 'Gift Combos',
       'subtitle': 'For New Mom, Kids & Loved Ones',
       'emoji': '🎁',
       'color': Color(0xFFF3E5F5),
-      'price': 'From ₹500',
-      'category': ProductCategory.giftCombos,
+      'label': 'From ₹500',
     },
   ];
 
@@ -134,13 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return Container(
           decoration: BoxDecoration(
             color: AppColors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 12,
-                offset: const Offset(0, -4),
-              ),
-            ],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, -4))],
           ),
           child: SafeArea(
             child: BottomNavigationBar(
@@ -151,10 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedItemColor: AppColors.secondary,
               unselectedItemColor: AppColors.textLight,
               type: BottomNavigationBarType.fixed,
-              selectedLabelStyle: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
+              selectedLabelStyle: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
               unselectedLabelStyle: GoogleFonts.poppins(fontSize: 11),
               items: [
                 const BottomNavigationBarItem(
@@ -171,31 +157,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: badges.Badge(
                     showBadge: cart.itemCount > 0,
                     badgeContent: Text(
-                      cart.itemCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      '${cart.itemCount}',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                     ),
-                    badgeStyle: const badges.BadgeStyle(
-                      badgeColor: AppColors.pink,
-                    ),
+                    badgeStyle: const badges.BadgeStyle(badgeColor: AppColors.pink),
                     child: const Icon(Icons.shopping_cart_outlined),
                   ),
                   activeIcon: badges.Badge(
                     showBadge: cart.itemCount > 0,
                     badgeContent: Text(
-                      cart.itemCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      '${cart.itemCount}',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                     ),
-                    badgeStyle: const badges.BadgeStyle(
-                      badgeColor: AppColors.pink,
-                    ),
+                    badgeStyle: const badges.BadgeStyle(badgeColor: AppColors.pink),
                     child: const Icon(Icons.shopping_cart),
                   ),
                   label: 'Cart',
@@ -240,14 +214,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Text('🌾', style: TextStyle(fontSize: 18)),
             const SizedBox(width: 8),
-            Text(
-              'Mannin Suvai',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.white,
-              ),
-            ),
+            Text('Mannin Suvai',
+                style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.white)),
           ],
         ),
         background: Container(
@@ -264,14 +232,8 @@ class _HomeScreenState extends State<HomeScreen> {
         Consumer<CartProvider>(
           builder: (ctx, cart, _) => badges.Badge(
             showBadge: cart.itemCount > 0,
-            badgeContent: Text(
-              cart.itemCount.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            badgeContent: Text('${cart.itemCount}',
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
             badgeStyle: const badges.BadgeStyle(badgeColor: AppColors.pink),
             child: IconButton(
               icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
@@ -291,11 +253,10 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 200,
             autoPlay: true,
             autoPlayInterval: const Duration(seconds: 4),
-            enlargeCenterPage: false,
             viewportFraction: 1.0,
             onPageChanged: (index, _) => setState(() => _bannerIndex = index),
           ),
-          items: _banners.map((banner) => _buildBannerItem(banner)).toList(),
+          items: _banners.map(_buildBannerItem).toList(),
         ),
         const SizedBox(height: 12),
         AnimatedSmoothIndicator(
@@ -315,22 +276,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBannerItem(Map<String, dynamic> banner) {
     return GestureDetector(
-      onTap: () {
-        setState(() => _currentNavIndex = 1);
-      },
+      onTap: () => setState(() => _currentNavIndex = 1),
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: banner['color'],
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -342,67 +295,34 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.secondary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text(
-                        'Mannin Suvai',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: AppColors.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text('Mannin Suvai',
+                          style: GoogleFonts.poppins(fontSize: 11, color: AppColors.secondary, fontWeight: FontWeight.w600)),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      banner['title'],
-                      style: GoogleFonts.playfairDisplay(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textDark,
-                      ),
-                    ),
+                    Text(banner['title'],
+                        style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                     const SizedBox(height: 4),
-                    Text(
-                      banner['subtitle'],
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.textMedium,
-                      ),
-                      maxLines: 2,
-                    ),
+                    Text(banner['subtitle'],
+                        style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMedium), maxLines: 2),
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 6,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.secondary,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text(
-                        banner['price'],
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text(banner['label'],
+                          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.white, fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
               ),
-              Text(
-                banner['emoji'],
-                style: const TextStyle(fontSize: 72),
-              ),
+              Text(banner['emoji'], style: const TextStyle(fontSize: 72)),
             ],
           ),
         ),
@@ -419,24 +339,12 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Shop by Category',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                ),
-              ),
+              Text('Shop by Category',
+                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
               TextButton(
                 onPressed: () => setState(() => _currentNavIndex = 1),
-                child: Text(
-                  'See All',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: AppColors.secondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: Text('See All',
+                    style: GoogleFonts.poppins(fontSize: 13, color: AppColors.secondary, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -455,16 +363,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: cat['color'],
                   bgColor: cat['bgColor'],
                   count: cat['count'],
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ProductsScreen(
-                          initialCategory: cat['category'],
-                        ),
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProductsScreen(initialCategory: cat['category']),
+                    ),
+                  ),
                 );
               },
             ),
@@ -476,75 +380,68 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFeaturedSection() {
-    final featured = ProductsData.getFeatured();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Featured Products',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Our most loved natural products',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: AppColors.textMedium,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.72,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: featured.length,
-            itemBuilder: (context, index) => ProductCard(
-              product: featured[index],
-              onTap: () => _navigateToProduct(featured[index]),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => setState(() => _currentNavIndex = 1),
-              icon: const Icon(Icons.grid_view_outlined),
-              label: Text(
-                'View All Products',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.secondary,
-                side: const BorderSide(color: AppColors.secondary, width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+    return Consumer<ProductsProvider>(
+      builder: (ctx, provider, _) {
+        final featured = provider.getFeatured();
+        if (featured.isEmpty) return const SizedBox.shrink();
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Featured Products',
+                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              const SizedBox(height: 4),
+              Text('Our most loved natural products',
+                  style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textMedium)),
+              const SizedBox(height: 12),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: featured.length,
+                itemBuilder: (context, index) => ProductCard(
+                  product: featured[index],
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ProductsScreen(initialProduct: featured[index])),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => setState(() => _currentNavIndex = 1),
+                  icon: const Icon(Icons.grid_view_outlined),
+                  label: Text('View All Products', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.secondary,
+                    side: const BorderSide(color: AppColors.secondary, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
           ),
-          const SizedBox(height: 24),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildWhyChooseUs() {
     final reasons = [
-      {'icon': '🌿', 'title': 'All Natural', 'desc': 'No preservatives or artificial additives'},
-      {'icon': '🏠', 'title': 'Homemade', 'desc': 'Made with love in small batches'},
-      {'icon': '✅', 'title': 'FSSAI Certified', 'desc': 'Reg. ID: 22426379000200'},
+      {'icon': '🌿', 'title': 'All Natural', 'desc': 'No preservatives or additives'},
+      {'icon': '🏠', 'title': 'Homemade', 'desc': 'Made fresh in small batches'},
+      {'icon': '✅', 'title': 'FSSAI Certified', 'desc': 'Reg. 22426379000200'},
       {'icon': '🚀', 'title': 'Fast Delivery', 'desc': 'WhatsApp orders accepted'},
     ];
 
@@ -562,14 +459,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Why Choose Us?',
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.white,
-            ),
-          ),
+          Text('Why Choose Us?',
+              style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.white)),
           const SizedBox(height: 16),
           GridView.count(
             shrinkWrap: true,
@@ -578,47 +469,31 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
             childAspectRatio: 2.2,
-            children: reasons.map((r) => _buildReasonItem(r)).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReasonItem(Map<String, dynamic> reason) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Text(reason['icon'], style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  reason['title'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.white,
+            children: reasons.map((r) => Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Text(r['icon']!, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(r['title']!,
+                            style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.white)),
+                        Text(r['desc']!,
+                            style: GoogleFonts.poppins(fontSize: 9, color: Colors.white70), maxLines: 2),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  reason['desc'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 9,
-                    color: Colors.white70,
-                  ),
-                  maxLines: 2,
-                ),
-              ],
-            ),
+                ],
+              ),
+            )).toList(),
           ),
         ],
       ),
@@ -632,62 +507,23 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
-          Text(
-            '🛒 Order via WhatsApp',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.secondary,
-            ),
-          ),
+          Text('🛒 Order via WhatsApp',
+              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.secondary)),
           const SizedBox(height: 8),
-          Text(
-            'Orders accepted through WhatsApp\n8754077890 & 9994846501',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: AppColors.secondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          Text('8754077890 & 9994846501',
+              style: GoogleFonts.poppins(fontSize: 14, color: AppColors.secondary), textAlign: TextAlign.center),
           const SizedBox(height: 4),
-          Text(
-            'Instagram: @manninsuvai25\nEmail: manninsuvai25@gmail.com',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: AppColors.textMedium,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          Text('manninsuvai25@gmail.com | @manninsuvai25',
+              style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMedium), textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          Text(
-            '🎁 Exciting Gift Combos for New MOM,\nKids & Your Loved Ones!',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: AppColors.secondary,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          Text('🎁 Exciting Gift Combos for New MOM, Kids & Your Loved Ones!',
+              style: GoogleFonts.poppins(fontSize: 13, color: AppColors.secondary, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center),
         ],
-      ),
-    );
-  }
-
-  void _navigateToProduct(product) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProductsScreen(initialProduct: product),
       ),
     );
   }
