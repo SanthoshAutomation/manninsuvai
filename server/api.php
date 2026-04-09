@@ -1,21 +1,22 @@
 <?php
 /**
  * Mannin Suvai - Products API
- * Upload this file to your web server (shared hosting / VPS).
+ * Upload this file to your Hostinger server (e.g. public_html/manninsuvai/).
  * The products.json file will be created in the same folder.
  *
  * SETUP:
- *  1. Upload api.php and products.json to your server.
- *  2. Set $SECRET_KEY below to any random string.
+ *  1. Upload api.php, send_notification.php and products.json to your server.
+ *  2. Set $SECRET_KEY below to any random string (remember it — you'll need it in Admin Settings).
  *  3. In the Flutter admin panel → Settings:
- *       Read URL : https://yourserver.com/path/api.php
- *       Write URL: https://yourserver.com/path/api.php
- *       API Key  : (same secret key)
+ *       Read URL : https://yourdomain.com/manninsuvai/api.php
+ *       Write URL: https://yourdomain.com/manninsuvai/api.php
+ *       API Key  : (same secret key as below)
  *       Use JSONBin headers: OFF
  */
 
-$SECRET_KEY = 'CHANGE_THIS_TO_A_RANDOM_SECRET';
+$SECRET_KEY  = 'CHANGE_THIS_TO_A_RANDOM_SECRET';
 $DATA_FILE   = __DIR__ . '/products.json';
+$TOKENS_FILE = __DIR__ . '/web_tokens.json';
 
 // ── CORS headers (allow Flutter web & mobile) ─────────────────────────────
 header('Access-Control-Allow-Origin: *');
@@ -28,6 +29,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 header('Content-Type: application/json; charset=UTF-8');
+
+// ── Web push token registration (no auth — any browser can register) ──────
+// Called automatically by the Flutter web app when a user opens the site.
+// Tokens are stored in web_tokens.json and used by send_notification.php.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'register_token') {
+    $body  = json_decode(file_get_contents('php://input'), true);
+    $token = trim($body['token'] ?? '');
+
+    if (!$token) {
+        http_response_code(400);
+        echo json_encode(['error' => 'token required']);
+        exit;
+    }
+
+    $tokens = file_exists($TOKENS_FILE)
+        ? (json_decode(file_get_contents($TOKENS_FILE), true) ?? [])
+        : [];
+
+    if (!in_array($token, $tokens, true)) {
+        $tokens[] = $token;
+        // Keep only the latest 2000 tokens to prevent file bloat
+        if (count($tokens) > 2000) {
+            $tokens = array_slice($tokens, -2000);
+        }
+        file_put_contents($TOKENS_FILE, json_encode($tokens));
+    }
+
+    echo json_encode(['success' => true]);
+    exit;
+}
 
 // ── GET: return products ───────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {

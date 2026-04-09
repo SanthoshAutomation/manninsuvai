@@ -24,6 +24,11 @@ class DefaultFirebaseOptions {
     }
   }
 
+  /// Web Push VAPID key — from Firebase Console → Project Settings →
+  /// Cloud Messaging → Web Push certificates → Key pair.
+  /// Required for Chrome push notifications.
+  static const String webVapidKey = 'REPLACE_WITH_YOUR_VAPID_KEY';
+
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'REPLACE_WITH_YOUR_WEB_API_KEY',
     appId: 'REPLACE_WITH_YOUR_WEB_APP_ID',

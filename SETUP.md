@@ -101,12 +101,35 @@ Select Android (and Web if needed) when prompted. This overwrites `lib/firebase_
 > **Keep this file private.** Never share it or commit it to Git.
 > It gives admin-level access to send notifications from your Firebase project.
 
-### 3d — Test It
+### 3d — Enable Chrome Web Push Notifications
 
-1. Install the app on a real Android device.
-2. Open the app once (it subscribes to the topic automatically).
+Web users (people opening your site in Chrome) need one extra step — a VAPID key.
+
+1. In Firebase Console → **Project Settings → Cloud Messaging** tab.
+2. Scroll to **"Web Push certificates"**.
+3. Click **"Generate key pair"** (do this once — it creates a VAPID key).
+4. Copy the long key string.
+
+Open `lib/firebase_options.dart` in your Flutter project → replace:
+```dart
+static const String webVapidKey = 'REPLACE_WITH_YOUR_VAPID_KEY';
+```
+with your copied key.
+
+Also open `web/firebase-messaging-sw.js` → replace all `REPLACE_WITH_YOUR_*` placeholders
+with the same Firebase config values from `lib/firebase_options.dart` (the `web` block).
+
+**How Chrome notifications work:**
+- When a user opens the web app, Chrome shows **"Allow Notifications?"**
+- If they click Allow, their browser token is saved to `web_tokens.json` on your Hostinger server
+- When admin sends a notification, the server delivers it to ALL Android users (topic) + ALL Chrome users (individual tokens)
+
+### 3e — Test It
+
+1. Install the app on a real Android device → open it once.
+2. Open the web app in Chrome → click **"Allow Notifications"** when prompted.
 3. In Admin → Send Notification → type a title and message → tap **Send**.
-4. You should receive the notification within a few seconds.
+4. Both the Android device and Chrome browser should receive the notification.
 
 ---
 
@@ -174,6 +197,10 @@ manninsuvai/
 │   │   └── cart_provider.dart
 │   ├── screens/ ...
 │   └── widgets/ ...
+├── web/
+│   ├── index.html
+│   ├── manifest.json
+│   └── firebase-messaging-sw.js   # Service worker — fill in Firebase config values
 ├── android/
 │   └── app/
 │       └── google-services.json   # Replace with your real Firebase file
