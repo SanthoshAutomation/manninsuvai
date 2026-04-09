@@ -9,14 +9,26 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # State Management
   provider: ^6.1.1
-  url_launcher: ^6.3.0
+
+  # HTTP - fetch/save JSON from server
+  http: ^1.2.2
+
+  # Local storage for admin settings & PIN
+  shared_preferences: ^2.3.2
+
+  # Push Notifications (OneSignal - free, no server needed)
+  onesignal_flutter: ^5.2.6
+
+  # UI packages
   google_fonts: ^6.2.1
   badges: ^3.1.2
   smooth_page_indicator: ^1.1.0
   carousel_slider: ^5.0.0
-  share_plus: ^10.0.0
   flutter_animate: ^4.5.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
