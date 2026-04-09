@@ -84,19 +84,42 @@ class ProductCard extends StatelessWidget {
 
     return Stack(
       children: [
-        // Background
+        // Background — network image or emoji
         Container(
           height: 130,
           decoration: BoxDecoration(
             color: _cardColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
-          child: Center(
-            child: Text(
-              product.imageEmoji,
-              style: const TextStyle(fontSize: 64),
-            ),
-          ),
+          clipBehavior: Clip.antiAlias,
+          child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+              ? Image.network(
+                  product.imageUrl!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (_, __, ___) => Center(
+                    child: Text(product.imageEmoji, style: const TextStyle(fontSize: 64)),
+                  ),
+                  loadingBuilder: (_, child, progress) => progress == null
+                      ? child
+                      : Center(
+                          child: SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _accentColor,
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded /
+                                      progress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        ),
+                )
+              : Center(
+                  child: Text(product.imageEmoji, style: const TextStyle(fontSize: 64)),
+                ),
         ),
 
         // Out of stock overlay

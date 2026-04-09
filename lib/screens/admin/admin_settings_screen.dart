@@ -21,29 +21,36 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   late TextEditingController _apiKeyCtrl;
   late TextEditingController _newPinCtrl;
   late TextEditingController _confirmPinCtrl;
+  late TextEditingController _bannerCtrl;
+  late TextEditingController _deliveryCtrl;
 
-  bool _useJsonBin = true;
+  bool _useJsonBin = false;
   bool _saving = false;
   bool _seeding = false;
 
   @override
   void initState() {
     super.initState();
-    _readUrlCtrl = TextEditingController();
-    _writeUrlCtrl = TextEditingController();
-    _apiKeyCtrl = TextEditingController();
-    _newPinCtrl = TextEditingController();
+    _readUrlCtrl    = TextEditingController();
+    _writeUrlCtrl   = TextEditingController();
+    _apiKeyCtrl     = TextEditingController();
+    _newPinCtrl     = TextEditingController();
     _confirmPinCtrl = TextEditingController();
+    _bannerCtrl     = TextEditingController();
+    _deliveryCtrl   = TextEditingController();
     _loadSettings();
   }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final deliveryRaw = prefs.getDouble(AppConfigKeys.deliveryCharge) ?? -1;
     setState(() {
-      _readUrlCtrl.text = prefs.getString(AppConfigKeys.productsReadUrl) ?? '';
+      _readUrlCtrl.text  = prefs.getString(AppConfigKeys.productsReadUrl) ?? '';
       _writeUrlCtrl.text = prefs.getString(AppConfigKeys.productsWriteUrl) ?? '';
-      _apiKeyCtrl.text = prefs.getString(AppConfigKeys.serverApiKey) ?? '';
-      _useJsonBin = prefs.getBool(AppConfigKeys.useJsonBinHeaders) ?? false;
+      _apiKeyCtrl.text   = prefs.getString(AppConfigKeys.serverApiKey) ?? '';
+      _useJsonBin        = prefs.getBool(AppConfigKeys.useJsonBinHeaders) ?? false;
+      _bannerCtrl.text   = prefs.getString(AppConfigKeys.bannerText) ?? '';
+      _deliveryCtrl.text = deliveryRaw < 0 ? '' : deliveryRaw.toStringAsFixed(0);
     });
   }
 
@@ -51,7 +58,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   void dispose() {
     for (final c in [
       _readUrlCtrl, _writeUrlCtrl, _apiKeyCtrl,
-      _newPinCtrl, _confirmPinCtrl,
+      _newPinCtrl, _confirmPinCtrl, _bannerCtrl, _deliveryCtrl,
     ]) {
       c.dispose();
     }
@@ -79,6 +86,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildServerSection(),
+            const SizedBox(height: 20),
+            _buildBannerSection(),
+            const SizedBox(height: 20),
+            _buildDeliverySection(),
             const SizedBox(height: 20),
             _buildNotificationSection(),
             const SizedBox(height: 20),
@@ -168,6 +179,58 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               ),
               style: GoogleFonts.poppins(fontSize: 12),
               obscureText: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBannerSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(
+              '📢 Announcement Banner',
+              'Shown at the top of the home screen. Leave empty to hide.',
+            ),
+            TextFormField(
+              controller: _bannerCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Banner Message',
+                hintText: 'e.g. 🎉 Festival Sale! 10% off on all Health Mixes',
+              ),
+              style: GoogleFonts.poppins(fontSize: 13),
+              maxLines: 2,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeliverySection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(
+              '🚚 Delivery Charge',
+              'Shown in cart. Leave empty to show "Contact for charges".',
+            ),
+            TextFormField(
+              controller: _deliveryCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Delivery Charge (₹)',
+                hintText: 'e.g. 50  (enter 0 for free delivery)',
+              ),
+              keyboardType: TextInputType.number,
+              style: GoogleFonts.poppins(fontSize: 13),
             ),
           ],
         ),
@@ -347,6 +410,11 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     await prefs.setString(AppConfigKeys.productsWriteUrl, _writeUrlCtrl.text.trim());
     await prefs.setString(AppConfigKeys.serverApiKey, _apiKeyCtrl.text.trim());
     await prefs.setBool(AppConfigKeys.useJsonBinHeaders, _useJsonBin);
+    await prefs.setString(AppConfigKeys.bannerText, _bannerCtrl.text.trim());
+
+    final deliveryText = _deliveryCtrl.text.trim();
+    final deliveryVal = deliveryText.isEmpty ? -1.0 : (double.tryParse(deliveryText) ?? -1.0);
+    await prefs.setDouble(AppConfigKeys.deliveryCharge, deliveryVal);
 
     if (_newPinCtrl.text.isNotEmpty) {
       await prefs.setString(AppConfigKeys.adminPin, _newPinCtrl.text);

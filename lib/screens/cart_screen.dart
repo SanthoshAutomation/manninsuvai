@@ -1,21 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../theme/app_theme.dart';
-import '../providers/cart_provider.dart';
 import '../models/cart_item.dart';
+import '../providers/cart_provider.dart';
+import '../providers/locale_provider.dart';
+import '../theme/app_theme.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
   @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  double _deliveryCharge = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDelivery();
+  }
+
+  Future<void> _loadDelivery() async {
+    final cart = context.read<CartProvider>();
+    final charge = await cart.getDeliveryCharge();
+    if (mounted) setState(() => _deliveryCharge = charge);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final loc = context.watch<LocaleProvider>();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          'My Cart',
+          loc.s('cart_title'),
           style: GoogleFonts.playfairDisplay(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -337,18 +358,18 @@ class CartScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Text(loc.s('cart_delivery'),
+                    style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textMedium)),
                 Text(
-                  'Delivery',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: AppColors.textMedium,
-                  ),
-                ),
-                Text(
-                  'Contact for delivery charges',
+                  _deliveryCharge == 0
+                      ? loc.s('cart_free_del')
+                      : _deliveryCharge > 0
+                          ? '₹${_deliveryCharge.toStringAsFixed(0)}'
+                          : loc.s('cart_contact_del'),
                   style: GoogleFonts.poppins(
                     fontSize: 12,
-                    color: AppColors.textLight,
+                    color: _deliveryCharge == 0 ? AppColors.secondary : AppColors.textLight,
+                    fontWeight: _deliveryCharge == 0 ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
               ],
@@ -357,21 +378,15 @@ class CartScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Text(loc.s('cart_total'),
+                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700,
+                        color: AppColors.textDark)),
                 Text(
-                  'Total',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                Text(
-                  '₹${cart.totalAmount.toStringAsFixed(0)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.secondary,
-                  ),
+                  _deliveryCharge > 0
+                      ? '₹${(cart.subtotal + _deliveryCharge).toStringAsFixed(0)}'
+                      : '₹${cart.subtotal.toStringAsFixed(0)}',
+                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w800,
+                      color: AppColors.secondary),
                 ),
               ],
             ),
@@ -416,7 +431,9 @@ class CartScreen extends StatelessWidget {
   }
 
   Future<void> _orderViaWhatsApp(BuildContext context, CartProvider cart) async {
-    final message = cart.buildWhatsAppMessage();
+    // Save order to server before opening WhatsApp
+    await cart.saveOrderToServer(_deliveryCharge);
+    final message = cart.buildWhatsAppMessage(deliveryCharge: _deliveryCharge);
     final primaryNumber = '918754077890';
     final waUrl = Uri.parse('https://wa.me/$primaryNumber?text=$message');
 

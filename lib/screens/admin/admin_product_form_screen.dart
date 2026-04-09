@@ -23,7 +23,9 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
   late final TextEditingController _subtitleCtrl;
   late final TextEditingController _descriptionCtrl;
   late final TextEditingController _emojiCtrl;
+  late final TextEditingController _imageUrlCtrl;
   late final TextEditingController _badgeCtrl;
+  bool _useImageUrl = false; // false = emoji, true = image URL
 
   ProductCategory _category = ProductCategory.healthMix;
   bool _inStock = true;
@@ -46,6 +48,8 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
     _subtitleCtrl = TextEditingController(text: p?.subtitle ?? '');
     _descriptionCtrl = TextEditingController(text: p?.description ?? '');
     _emojiCtrl = TextEditingController(text: p?.imageEmoji ?? '📦');
+    _imageUrlCtrl = TextEditingController(text: p?.imageUrl ?? '');
+    _useImageUrl = (p?.imageUrl != null && p!.imageUrl!.isNotEmpty);
     _badgeCtrl = TextEditingController(text: p?.badge ?? '');
     _category = p?.category ?? ProductCategory.healthMix;
     _inStock = p?.inStock ?? true;
@@ -61,7 +65,7 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
   void dispose() {
     for (final c in [
       _nameCtrl, _subtitleCtrl, _descriptionCtrl, _emojiCtrl,
-      _badgeCtrl, _highlightsCtrl, _ingredientsCtrl,
+      _imageUrlCtrl, _badgeCtrl, _highlightsCtrl, _ingredientsCtrl,
     ]) {
       c.dispose();
     }
@@ -143,37 +147,85 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
         padding: const EdgeInsets.all(14),
         child: Column(
           children: [
+            // Image type toggle
             Row(
               children: [
-                // Emoji picker
-                GestureDetector(
-                  onTap: _pickEmoji,
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: AppColors.secondaryLighter,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _emojiCtrl.text.isEmpty ? '📦' : _emojiCtrl.text,
-                        style: const TextStyle(fontSize: 32),
-                      ),
-                    ),
-                  ),
+                Text('Product Image:', style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textMedium)),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text('Emoji', style: GoogleFonts.poppins(fontSize: 12)),
+                  selected: !_useImageUrl,
+                  selectedColor: AppColors.secondaryLighter,
+                  onSelected: (_) => setState(() => _useImageUrl = false),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Product Name *'),
-                    style: GoogleFonts.poppins(fontSize: 14),
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                  ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: Text('Image URL', style: GoogleFonts.poppins(fontSize: 12)),
+                  selected: _useImageUrl,
+                  selectedColor: AppColors.secondaryLighter,
+                  onSelected: (_) => setState(() => _useImageUrl = true),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                // Preview box
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryLighter,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _useImageUrl && _imageUrlCtrl.text.isNotEmpty
+                      ? Image.network(
+                          _imageUrlCtrl.text,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.broken_image_outlined, size: 28, color: Colors.grey),
+                        )
+                      : GestureDetector(
+                          onTap: _pickEmoji,
+                          child: Center(
+                            child: Text(
+                              _emojiCtrl.text.isEmpty ? '📦' : _emojiCtrl.text,
+                              style: const TextStyle(fontSize: 32),
+                            ),
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _useImageUrl
+                      ? TextFormField(
+                          controller: _imageUrlCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Image URL',
+                            hintText: 'https://yoursite.com/image.jpg',
+                          ),
+                          style: GoogleFonts.poppins(fontSize: 13),
+                          onChanged: (_) => setState(() {}),
+                        )
+                      : TextFormField(
+                          controller: _nameCtrl,
+                          decoration: const InputDecoration(labelText: 'Product Name *'),
+                          style: GoogleFonts.poppins(fontSize: 14),
+                          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        ),
+                ),
+              ],
+            ),
+            if (_useImageUrl) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(labelText: 'Product Name *'),
+                style: GoogleFonts.poppins(fontSize: 14),
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              ),
+            ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _subtitleCtrl,
@@ -436,6 +488,9 @@ class _AdminProductFormScreenState extends State<AdminProductFormScreen> {
       description: _descriptionCtrl.text.trim(),
       category: _category,
       imageEmoji: _emojiCtrl.text.isEmpty ? '📦' : _emojiCtrl.text,
+      imageUrl: _useImageUrl && _imageUrlCtrl.text.trim().isNotEmpty
+          ? _imageUrlCtrl.text.trim()
+          : null,
       badge: _badgeCtrl.text.trim().isEmpty ? null : _badgeCtrl.text.trim(),
       isPreBooking: _isPreBooking,
       inStock: _inStock,

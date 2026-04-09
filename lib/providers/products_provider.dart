@@ -59,6 +59,15 @@ class ProductsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets all products in a category to the given stock state.
+  void setCategoryStock(ProductCategory category, bool inStock) {
+    _products = _products.map((p) {
+      if (p.category == category) return p.copyWith(inStock: inStock);
+      return p;
+    }).toList();
+    notifyListeners();
+  }
+
   Future<void> saveToServer() async {
     await ProductService.saveProducts(_products);
   }

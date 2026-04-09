@@ -14,10 +14,12 @@
  *       Use JSONBin headers: OFF
  */
 
-$SECRET_KEY  = 'CHANGE_THIS_TO_A_RANDOM_SECRET';
-$DATA_FILE   = __DIR__ . '/products.json';
-$TOKENS_FILE = __DIR__ . '/web_tokens.json';
-$STATS_FILE  = __DIR__ . '/stats.json';
+$SECRET_KEY   = 'CHANGE_THIS_TO_A_RANDOM_SECRET';
+$DATA_FILE    = __DIR__ . '/products.json';
+$TOKENS_FILE  = __DIR__ . '/web_tokens.json';
+$STATS_FILE   = __DIR__ . '/stats.json';
+$ORDERS_FILE  = __DIR__ . '/orders.json';
+$VIEWS_FILE   = __DIR__ . '/views.json';
 
 // ── CORS headers (allow Flutter web & mobile) ─────────────────────────────
 header('Access-Control-Allow-Origin: *');
@@ -111,6 +113,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'regist
     }
 
     echo json_encode(['success' => true]);
+    exit;
+}
+
+// ── Track product view (no auth) ─────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'track_view') {
+    $body      = json_decode(file_get_contents('php://input'), true);
+    $productId = trim($body['productId'] ?? '');
+    if ($productId) {
+        $views = file_exists($VIEWS_FILE)
+            ? (json_decode(file_get_contents($VIEWS_FILE), true) ?? [])
+            : [];
+        $views[$productId] = ($views[$productId] ?? 0) + 1;
+        file_put_contents($VIEWS_FILE, json_encode($views));
+    }
+    echo json_encode(['success' => true]);
+    exit;
+}
+
+// ── Get top-viewed products (admin only) ──────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'top_views') {
+    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if ($auth !== 'Bearer ' . $SECRET_KEY) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+    $views = file_exists($VIEWS_FILE)
+        ? (json_decode(file_get_contents($VIEWS_FILE), true) ?? [])
+        : [];
+    arsort($views);
+    echo json_encode(array_slice($views, 0, 10, true));
+    exit;
+}
+
+// ── Save order (no auth — called by Flutter on checkout) ──────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['action'] ?? '') === 'save_order') {
+    $body  = json_decode(file_get_contents('php://input'), true);
+    if (!$body || empty($body['items'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid order data']);
+        exit;
+    }
+
+    $orders = file_exists($ORDERS_FILE)
+        ? (json_decode(file_get_contents($ORDERS_FILE), true) ?? [])
+        : [];
+
+    $body['savedAt'] = date('c'); // server timestamp
+    array_unshift($orders, $body); // newest first
+
+    // Keep last 500 orders
+    if (count($orders) > 500) {
+        $orders = array_slice($orders, 0, 500);
+    }
+
+    file_put_contents($ORDERS_FILE, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    echo json_encode(['success' => true]);
+    exit;
+}
+
+// ── Get orders (admin only) ───────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'get_orders') {
+    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if ($auth !== 'Bearer ' . $SECRET_KEY) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+    $limit  = min((int) ($_GET['limit'] ?? 50), 200);
+    $orders = file_exists($ORDERS_FILE)
+        ? (json_decode(file_get_contents($ORDERS_FILE), true) ?? [])
+        : [];
+    echo json_encode(array_slice($orders, 0, $limit));
     exit;
 }
 

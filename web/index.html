@@ -62,6 +62,25 @@
   </div>
 
   <script>
+    // Capture PWA install prompt so it can be triggered programmatically
+    window._pwaInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window._pwaInstallPrompt = e;
+    });
+
+    // Called by Flutter to trigger the native install prompt
+    window.triggerPwaInstall = function () {
+      if (window._pwaInstallPrompt) {
+        window._pwaInstallPrompt.prompt();
+        window._pwaInstallPrompt.userChoice.then(function (result) {
+          window._pwaInstallPrompt = null;
+        });
+        return true;
+      }
+      return false;
+    };
+
     window.addEventListener('flutter-first-frame', function () {
       document.getElementById('loading').remove();
     });

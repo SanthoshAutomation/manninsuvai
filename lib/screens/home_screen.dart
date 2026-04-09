@@ -1,13 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:badges/badges.dart' as badges;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 import '../theme/app_theme.dart';
 import '../models/product.dart';
 import '../providers/products_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/locale_provider.dart';
 import '../widgets/product_card.dart';
 import '../widgets/category_card.dart';
 import 'products_screen.dart';
@@ -24,6 +28,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentNavIndex = 0;
   int _bannerIndex = 0;
+  String _announcementBanner = '';
+  bool _bannerDismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBanner();
+  }
+
+  Future<void> _loadBanner() async {
+    final prefs = await SharedPreferences.getInstance();
+    final text = prefs.getString(AppConfigKeys.bannerText) ?? '';
+    if (mounted) setState(() => _announcementBanner = text);
+  }
 
   final List<Map<String, dynamic>> _banners = [
     {
@@ -124,8 +142,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBottomNavBar() {
-    return Consumer<CartProvider>(
-      builder: (ctx, cart, _) {
+    return Consumer2<CartProvider, LocaleProvider>(
+      builder: (ctx, cart, loc, _) {
         return Container(
           decoration: BoxDecoration(
             color: AppColors.white,
@@ -143,15 +161,15 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedLabelStyle: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
               unselectedLabelStyle: GoogleFonts.poppins(fontSize: 11),
               items: [
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
-                  activeIcon: Icon(Icons.home),
-                  label: 'Home',
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.home_outlined),
+                  activeIcon: const Icon(Icons.home),
+                  label: loc.s('nav_home'),
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.grid_view_outlined),
-                  activeIcon: Icon(Icons.grid_view),
-                  label: 'Products',
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.grid_view_outlined),
+                  activeIcon: const Icon(Icons.grid_view),
+                  label: loc.s('nav_products'),
                 ),
                 BottomNavigationBarItem(
                   icon: badges.Badge(
@@ -172,12 +190,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     badgeStyle: const badges.BadgeStyle(badgeColor: AppColors.pink),
                     child: const Icon(Icons.shopping_cart),
                   ),
-                  label: 'Cart',
+                  label: loc.s('nav_cart'),
                 ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.info_outline),
-                  activeIcon: Icon(Icons.info),
-                  label: 'About',
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.info_outline),
+                  activeIcon: const Icon(Icons.info),
+                  label: loc.s('nav_about'),
                 ),
               ],
             ),
@@ -191,6 +209,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return CustomScrollView(
       slivers: [
         _buildSliverAppBar(),
+        if (_announcementBanner.isNotEmpty && !_bannerDismissed)
+          SliverToBoxAdapter(child: _buildAnnouncementBanner()),
         SliverToBoxAdapter(child: _buildBannerCarousel()),
         SliverToBoxAdapter(child: _buildCategoriesSection()),
         SliverToBoxAdapter(child: _buildFeaturedSection()),
@@ -229,6 +249,28 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       actions: [
+        // Tamil / English toggle
+        Consumer<LocaleProvider>(
+          builder: (_, loc, __) => TextButton(
+            onPressed: loc.toggle,
+            child: Text(
+              loc.isTamil ? 'EN' : 'த',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ),
+        // PWA install button (web only)
+        if (kIsWeb)
+          IconButton(
+            icon: const Icon(Icons.install_mobile_outlined, color: Colors.white),
+            tooltip: 'Install App',
+            onPressed: _showInstallInstructions,
+          ),
+        // Cart
         Consumer<CartProvider>(
           builder: (ctx, cart, _) => badges.Badge(
             showBadge: cart.itemCount > 0,
@@ -242,6 +284,89 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAnnouncementBanner() {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFE53935),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _announcementBanner,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _bannerDismissed = true),
+            child: const Icon(Icons.close, color: Colors.white70, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInstallInstructions() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Text('📲', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Text('Install App', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Add Mannin Suvai to your home screen for the best experience:',
+                style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textMedium)),
+            const SizedBox(height: 12),
+            _installStep('1', 'Tap the ⋮ menu in Chrome (top-right)'),
+            _installStep('2', 'Tap "Add to Home Screen"'),
+            _installStep('3', 'Tap "Add" to confirm'),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Got it', style: GoogleFonts.poppins(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _installStep(String num, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: const BoxDecoration(color: AppColors.secondary, shape: BoxShape.circle),
+            child: Center(
+              child: Text(num, style: const TextStyle(color: Colors.white, fontSize: 12,
+                  fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: GoogleFonts.poppins(fontSize: 13))),
+        ],
+      ),
     );
   }
 

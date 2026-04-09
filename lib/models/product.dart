@@ -120,7 +120,10 @@ class Product {
   final bool isPreBooking;
   final bool inStock;
   final String imageEmoji;
+  final String? imageUrl;
   final List<String> highlights;
+
+  final String? imageUrl; // if set, shows a network image instead of emoji
 
   const Product({
     required this.id,
@@ -134,6 +137,7 @@ class Product {
     this.isPreBooking = false,
     this.inStock = true,
     required this.imageEmoji,
+    this.imageUrl,
     this.highlights = const [],
   });
 
@@ -163,6 +167,7 @@ class Product {
       description: json['description'] as String? ?? '',
       category: category,
       imageEmoji: json['imageEmoji'] as String? ?? '📦',
+      imageUrl: json['imageUrl'] as String?,
       badge: json['badge'] as String?,
       isPreBooking: json['isPreBooking'] as bool? ?? false,
       inStock: json['inStock'] as bool? ?? true,
@@ -181,6 +186,7 @@ class Product {
         'description': description,
         'category': category.name,
         'imageEmoji': imageEmoji,
+        if (imageUrl != null && imageUrl!.isNotEmpty) 'imageUrl': imageUrl,
         if (badge != null) 'badge': badge,
         'isPreBooking': isPreBooking,
         'inStock': inStock,
@@ -201,6 +207,7 @@ class Product {
     bool? isPreBooking,
     bool? inStock,
     String? imageEmoji,
+    Object? imageUrl = _sentinel,
     List<String>? highlights,
   }) {
     return Product(
@@ -215,6 +222,7 @@ class Product {
       isPreBooking: isPreBooking ?? this.isPreBooking,
       inStock: inStock ?? this.inStock,
       imageEmoji: imageEmoji ?? this.imageEmoji,
+      imageUrl: imageUrl == _sentinel ? this.imageUrl : imageUrl as String?,
       highlights: highlights ?? this.highlights,
     );
   }

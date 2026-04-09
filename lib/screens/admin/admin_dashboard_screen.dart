@@ -7,7 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_config.dart';
 import '../../models/product.dart';
 import '../../providers/products_provider.dart';
+import '../../services/order_service.dart';
 import '../../theme/app_theme.dart';
+import 'admin_orders_screen.dart';
 import 'admin_product_form_screen.dart';
 import 'admin_send_notification_screen.dart';
 import 'admin_settings_screen.dart';
@@ -29,10 +31,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int? _notifSubscribers;
   bool _statsLoading = true;
 
+  // Most viewed products { productId: viewCount }
+  Map<String, int> _topViews = {};
+
   @override
   void initState() {
     super.initState();
     _fetchStats();
+    _fetchTopViews();
   }
 
   Future<void> _fetchStats() async {
@@ -72,6 +78,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _fetchTopViews() async {
+    try {
+      final views = await OrderService.fetchTopViews();
+      if (mounted) setState(() => _topViews = views);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,6 +96,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         backgroundColor: AppColors.secondary,
         actions: [
+          IconButton(
+            tooltip: 'Orders',
+            icon: const Icon(Icons.receipt_long_outlined, color: Colors.white),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminOrdersScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Send Notification',
             icon: const Icon(Icons.notifications_outlined, color: Colors.white),
@@ -111,6 +132,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             children: [
               _buildSummaryBar(provider),
               _buildStatsCard(),
+              if (_topViews.isNotEmpty) _buildTopViewedCard(provider.products),
+              _buildBulkStockBar(provider),
               _buildCategoryFilter(),
               Expanded(
                 child: products.isEmpty
@@ -224,6 +247,147 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _statDivider() {
     return Container(width: 1, height: 40, color: AppColors.secondaryLighter,
         margin: const EdgeInsets.symmetric(horizontal: 8));
+  }
+
+  Widget _buildTopViewedCard(List<Product> products) {
+    final entries = _topViews.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top = entries.take(5).toList();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.secondaryLighter),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('🔥 Most Viewed Products',
+              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700,
+                  color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          ...top.map((e) {
+            final product = products.where((p) => p.id == e.key).firstOrNull;
+            final name = product?.name ?? e.key;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Text(product?.imageEmoji ?? '📦', style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(name, style: GoogleFonts.poppins(fontSize: 12,
+                        color: AppColors.textDark), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondaryLighter,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text('${e.value} views',
+                        style: GoogleFonts.poppins(fontSize: 11, color: AppColors.secondary,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBulkStockBar(ProductsProvider provider) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.secondaryLighter),
+      ),
+      child: Row(
+        children: [
+          Text('Bulk Stock:',
+              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600,
+                  color: AppColors.textMedium)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: ProductCategory.values.map((cat) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: GestureDetector(
+                      onTap: () => _showBulkStockDialog(provider, cat),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondaryLighter,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${cat.emoji} ${cat.displayName}',
+                          style: GoogleFonts.poppins(fontSize: 11, color: AppColors.secondary,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBulkStockDialog(ProductsProvider provider, ProductCategory cat) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('${cat.emoji} ${cat.displayName}',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        content: Text('Set all products in this category:',
+            style: GoogleFonts.poppins()),
+        actions: [
+          TextButton(
+            onPressed: () {
+              provider.setCategoryStock(cat, false);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('All ${cat.displayName} marked Out of Stock',
+                    style: GoogleFonts.poppins()),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ));
+            },
+            child: Text('Out of Stock', style: GoogleFonts.poppins(color: Colors.red)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+            onPressed: () {
+              provider.setCategoryStock(cat, true);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('All ${cat.displayName} marked In Stock',
+                    style: GoogleFonts.poppins()),
+                backgroundColor: AppColors.secondary,
+                behavior: SnackBarBehavior.floating,
+              ));
+            },
+            child: Text('In Stock', style: GoogleFonts.poppins(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSummaryBar(ProductsProvider provider) {

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/app_theme.dart';
+import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
+import '../services/order_service.dart';
+import '../theme/app_theme.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -23,6 +24,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Track view (best-effort)
+    OrderService.trackView(widget.product.id);
   }
 
   @override
@@ -106,10 +109,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 40),
-                Text(
-                  product.imageEmoji,
-                  style: const TextStyle(fontSize: 100),
-                ),
+                if (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      product.imageUrl!,
+                      height: 140,
+                      width: 140,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          Text(product.imageEmoji, style: const TextStyle(fontSize: 100)),
+                    ),
+                  )
+                else
+                  Text(product.imageEmoji, style: const TextStyle(fontSize: 100)),
                 if (product.badge != null) ...[
                   const SizedBox(height: 8),
                   Container(

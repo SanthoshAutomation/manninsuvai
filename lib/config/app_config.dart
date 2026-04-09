@@ -23,6 +23,16 @@ class AppConfigKeys {
   static const String adminPin = 'cfg_admin_pin';
   static const String defaultAdminPin = '1234';
 
+  // ── Announcement Banner ───────────────────────────────────────────────────
+  /// Banner text shown on home screen. Empty string = banner hidden.
+  static const String bannerText = 'cfg_banner_text';
+  /// Banner background color as hex (e.g. 'E53935'). Defaults to red.
+  static const String bannerColor = 'cfg_banner_color';
+
+  // ── Delivery Charge ───────────────────────────────────────────────────────
+  /// Delivery charge in ₹. 0 = free delivery. -1 = "contact for charges".
+  static const String deliveryCharge = 'cfg_delivery_charge';
+
   // ── Fixed app constants ───────────────────────────────────────────────────
   static const String whatsappPrimary = '918754077890';
   static const String whatsappSecondary = '919994846501';
