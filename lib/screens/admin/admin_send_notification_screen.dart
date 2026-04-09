@@ -114,8 +114,8 @@ class _AdminSendNotificationScreenState
                   ),
                 ),
                 Text(
-                  'This will be sent to ALL users who have installed the app. '
-                  'Requires OneSignal to be configured in Settings.',
+                  'Sent to ALL users via Firebase FCM through your Hostinger server. '
+                  'Make sure firebase-service-account.json is uploaded to the server.',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: AppColors.textMedium,

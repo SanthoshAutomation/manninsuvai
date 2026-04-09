@@ -5,7 +5,7 @@ import '../../config/app_config.dart';
 import '../../services/product_service.dart';
 import '../../theme/app_theme.dart';
 
-/// Admin-only settings: server URL, API key, OneSignal config, PIN change.
+/// Admin-only settings: server URL, API key, PIN change.
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
 
@@ -19,8 +19,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   late TextEditingController _readUrlCtrl;
   late TextEditingController _writeUrlCtrl;
   late TextEditingController _apiKeyCtrl;
-  late TextEditingController _onesignalAppIdCtrl;
-  late TextEditingController _onesignalApiKeyCtrl;
   late TextEditingController _newPinCtrl;
   late TextEditingController _confirmPinCtrl;
 
@@ -34,8 +32,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     _readUrlCtrl = TextEditingController();
     _writeUrlCtrl = TextEditingController();
     _apiKeyCtrl = TextEditingController();
-    _onesignalAppIdCtrl = TextEditingController();
-    _onesignalApiKeyCtrl = TextEditingController();
     _newPinCtrl = TextEditingController();
     _confirmPinCtrl = TextEditingController();
     _loadSettings();
@@ -47,9 +43,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       _readUrlCtrl.text = prefs.getString(AppConfigKeys.productsReadUrl) ?? '';
       _writeUrlCtrl.text = prefs.getString(AppConfigKeys.productsWriteUrl) ?? '';
       _apiKeyCtrl.text = prefs.getString(AppConfigKeys.serverApiKey) ?? '';
-      _onesignalAppIdCtrl.text = prefs.getString(AppConfigKeys.onesignalAppId) ?? '';
-      _onesignalApiKeyCtrl.text = prefs.getString(AppConfigKeys.onesignalApiKey) ?? '';
-      _useJsonBin = prefs.getBool(AppConfigKeys.useJsonBinHeaders) ?? true;
+      _useJsonBin = prefs.getBool(AppConfigKeys.useJsonBinHeaders) ?? false;
     });
   }
 
@@ -57,7 +51,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   void dispose() {
     for (final c in [
       _readUrlCtrl, _writeUrlCtrl, _apiKeyCtrl,
-      _onesignalAppIdCtrl, _onesignalApiKeyCtrl,
       _newPinCtrl, _confirmPinCtrl,
     ]) {
       c.dispose();
@@ -190,26 +183,40 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionHeader(
-              '🔔 OneSignal Push Notifications',
-              'Free bulk notifications — no server needed',
+              '🔔 Push Notifications (Firebase FCM)',
+              'Notifications are sent via your Hostinger server',
             ),
-            TextFormField(
-              controller: _onesignalAppIdCtrl,
-              decoration: const InputDecoration(
-                labelText: 'OneSignal App ID',
-                hintText: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.secondaryLighter,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
               ),
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _onesignalApiKeyCtrl,
-              decoration: const InputDecoration(
-                labelText: 'OneSignal REST API Key',
-                hintText: 'Your REST API key from OneSignal dashboard',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Notifications use the same server URL and API key above. '
+                    'No extra config needed here.',
+                    style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textMedium, height: 1.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'One-time server setup required:',
+                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.secondary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '1. Create Firebase project at console.firebase.google.com\n'
+                    '2. Download service account JSON → upload as\n'
+                    '   firebase-service-account.json to Hostinger\n'
+                    '3. Replace google-services.json in android/app/\n'
+                    '4. Rebuild the app',
+                    style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textMedium, height: 1.6),
+                  ),
+                ],
               ),
-              style: GoogleFonts.poppins(fontSize: 12),
-              obscureText: true,
             ),
           ],
         ),
@@ -340,8 +347,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     await prefs.setString(AppConfigKeys.productsWriteUrl, _writeUrlCtrl.text.trim());
     await prefs.setString(AppConfigKeys.serverApiKey, _apiKeyCtrl.text.trim());
     await prefs.setBool(AppConfigKeys.useJsonBinHeaders, _useJsonBin);
-    await prefs.setString(AppConfigKeys.onesignalAppId, _onesignalAppIdCtrl.text.trim());
-    await prefs.setString(AppConfigKeys.onesignalApiKey, _onesignalApiKeyCtrl.text.trim());
 
     if (_newPinCtrl.text.isNotEmpty) {
       await prefs.setString(AppConfigKeys.adminPin, _newPinCtrl.text);

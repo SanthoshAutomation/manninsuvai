@@ -3,29 +3,21 @@
 class AppConfigKeys {
   // ── Server (products JSON) ────────────────────────────────────────────────
   /// Full URL to read the products JSON.
-  /// Example (JSONBin.io):  https://api.jsonbin.io/v3/b/YOUR_BIN_ID/latest
-  /// Example (own server):  https://yourserver.com/api/products.php
+  /// Example: https://yourdomain.com/api.php
   static const String productsReadUrl = 'cfg_products_read_url';
 
   /// Full URL to update the products JSON (HTTP PUT).
-  /// Example (JSONBin.io):  https://api.jsonbin.io/v3/b/YOUR_BIN_ID
-  /// Example (own server):  https://yourserver.com/api/products.php
+  /// Example: https://yourdomain.com/api.php
+  /// Also used to derive the notification URL (send_notification.php).
   static const String productsWriteUrl = 'cfg_products_write_url';
 
   /// Secret key sent as  Authorization: Bearer <key>  when writing.
-  /// JSONBin.io uses  X-Master-Key  — set this value to your master key.
+  /// Must match $SECRET_KEY in api.php and send_notification.php on the server.
   static const String serverApiKey = 'cfg_server_api_key';
 
   /// If true, send  X-Master-Key  header (JSONBin.io style).
-  /// If false, send  Authorization: Bearer  header (custom server style).
+  /// If false, send  Authorization: Bearer  header (Hostinger/custom server style).
   static const String useJsonBinHeaders = 'cfg_use_jsonbin_headers';
-
-  // ── OneSignal (bulk push notifications) ───────────────────────────────────
-  /// OneSignal Application ID (from OneSignal dashboard → Settings → Keys).
-  static const String onesignalAppId = 'cfg_onesignal_app_id';
-
-  /// OneSignal REST API Key (from OneSignal dashboard → Settings → Keys).
-  static const String onesignalApiKey = 'cfg_onesignal_api_key';
 
   // ── Admin PIN ─────────────────────────────────────────────────────────────
   static const String adminPin = 'cfg_admin_pin';

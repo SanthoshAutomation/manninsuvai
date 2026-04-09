@@ -1,53 +1,45 @@
-# Mannin Suvai — Setup Guide
+# Mannin Suvai — Setup Guide (Hostinger)
 
 ## How It Works
 
 ```
-Your server (PHP / JSONBin.io)
-       ↑ read products
-       ↓ save products (admin)
-   Flutter App
-       ↓ buy order → WhatsApp
-       ↓ notifications → OneSignal (free)
+Hostinger Server (PHP files)
+   ├── api.php               ← reads / saves products.json
+   └── send_notification.php ← sends FCM push notifications
+           ↑ admin saves / sends
+       Flutter App (Admin)
+           ↓ loads products
+       Flutter App (Users)
+           ↓ places order → WhatsApp
+           ↓ receives notifications ← Firebase FCM
 ```
 
-No database. No SQL. **Pure JSON file on your server.**
-
 ---
 
-## Step 1 — Set Up Your JSON Server
+## Step 1 — Upload Server Files to Hostinger
 
-### Option A: JSONBin.io (Recommended — free, no server needed)
+1. Login to **Hostinger → cPanel → File Manager**.
+2. Navigate to `public_html` (or create a subfolder like `public_html/manninsuvai/`).
+3. Upload these three files from the `server/` folder:
+   - `api.php`
+   - `products.json`
+   - `send_notification.php`
+4. Open `api.php` in the editor → find this line:
+   ```php
+   $SECRET_KEY = 'CHANGE_THIS_TO_A_RANDOM_SECRET';
+   ```
+   Change it to any password you choose (e.g. `mango2024secret`).
+5. Open `send_notification.php` → set the **same** `$SECRET_KEY`.
 
-1. Go to [jsonbin.io](https://jsonbin.io) and create a free account.
-2. Click **Create a New Bin**.
-3. Paste the contents of `server/products.json` into the editor and save.
-4. Copy your **Bin ID** from the URL (looks like `65f3a...`).
-5. Go to **API Keys** in the dashboard, copy your **Master Key**.
+Your API URL will be: `https://yourdomain.com/api.php`
 
-In the app → Admin Settings:
+In the app → Admin → Settings:
 | Field | Value |
 |---|---|
-| Use JSONBin headers | ON |
-| Read URL | `https://api.jsonbin.io/v3/b/YOUR_BIN_ID/latest` |
-| Write URL | `https://api.jsonbin.io/v3/b/YOUR_BIN_ID` |
-| API Key | `$2a$10$...` (your Master Key) |
-
----
-
-### Option B: Your Own Server (Shared Hosting / VPS)
-
-1. Upload `server/api.php` and `server/products.json` to your server (e.g., via cPanel File Manager or FTP).
-2. Open `server/api.php` and change the `$SECRET_KEY` to any random string.
-3. Note your API URL: `https://yourserver.com/path/api.php`
-
-In the app → Admin Settings:
-| Field | Value |
-|---|---|
-| Use JSONBin headers | OFF |
-| Read URL | `https://yourserver.com/path/api.php` |
-| Write URL | `https://yourserver.com/path/api.php` |
-| API Key | (your `$SECRET_KEY` from api.php) |
+| Use JSONBin headers | **OFF** |
+| Read URL | `https://yourdomain.com/api.php` |
+| Write URL | `https://yourdomain.com/api.php` |
+| API Key | `mango2024secret` (whatever you set) |
 
 ---
 
@@ -62,20 +54,59 @@ After configuring the server URL and API key:
 
 ---
 
-## Step 3 — Set Up Push Notifications (Optional)
+## Step 3 — Set Up Push Notifications (Firebase FCM)
 
-Uses **OneSignal** (free — unlimited push notifications).
+Push notifications use **Firebase Cloud Messaging (FCM)** — free, private, and run through Google. No user data is shared with any third party.
 
-1. Go to [onesignal.com](https://onesignal.com) and create a free account.
-2. Create a new app → choose **Google Android** and/or **Apple iOS**.
-3. Follow the setup wizard. Download the `google-services.json` for Android.
-4. From the dashboard → **Settings → Keys & IDs**:
-   - Copy **OneSignal App ID**
-   - Copy **REST API Key**
+### How it works
+```
+User installs app → silently subscribes to topic "manninsuvai_updates"
+Admin opens Admin → Notifications → types message → taps Send
+App POSTs to send_notification.php on Hostinger
+PHP uses service account to call Google's FCM API
+FCM delivers notification to ALL users' phones — even if app is closed
+```
 
-In the app → Admin Settings → paste the App ID and REST API Key.
+### 3a — Create Firebase Project
 
-For Android, place `google-services.json` in `android/app/`.
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project**.
+2. Give it any name (e.g. "manninsuvai") → continue → **Create project**.
+3. In the project dashboard, click the **Android icon** to add an Android app.
+4. Package name: `com.manninsuvai.app` → Register app.
+5. **Download `google-services.json`** → save it.
+6. Skip the remaining wizard steps.
+
+### 3b — Place google-services.json in the App
+
+Replace the placeholder file:
+```
+android/app/google-services.json   ← replace with the one you downloaded
+```
+
+Then regenerate `lib/firebase_options.dart`:
+```bash
+dart pub global activate flutterfire_cli
+flutterfire configure --project=YOUR-FIREBASE-PROJECT-ID
+```
+Select Android (and Web if needed) when prompted. This overwrites `lib/firebase_options.dart` with your real values.
+
+### 3c — Get Service Account for the Server
+
+1. In Firebase Console → **Project Settings** (gear icon).
+2. Click the **"Service accounts"** tab.
+3. Click **"Generate new private key"** → confirm → download the JSON file.
+4. **Rename** the file to: `firebase-service-account.json`
+5. **Upload** it to Hostinger in the same folder as `api.php`.
+
+> **Keep this file private.** Never share it or commit it to Git.
+> It gives admin-level access to send notifications from your Firebase project.
+
+### 3d — Test It
+
+1. Install the app on a real Android device.
+2. Open the app once (it subscribes to the topic automatically).
+3. In Admin → Send Notification → type a title and message → tap **Send**.
+4. You should receive the notification within a few seconds.
 
 ---
 
@@ -131,34 +162,27 @@ flutter build web --release
 ```
 manninsuvai/
 ├── lib/
-│   ├── main.dart               # App entry point
-│   ├── config/app_config.dart  # Settings key names
-│   ├── models/product.dart     # Product + variant with discount/stock
+│   ├── main.dart
+│   ├── firebase_options.dart       # Replace with real values (flutterfire configure)
+│   ├── config/app_config.dart
+│   ├── models/product.dart
 │   ├── services/
-│   │   ├── product_service.dart    # HTTP fetch/save JSON
-│   │   └── notification_service.dart # OneSignal bulk push
+│   │   ├── product_service.dart
+│   │   └── notification_service.dart
 │   ├── providers/
-│   │   ├── products_provider.dart  # Dynamic product state
+│   │   ├── products_provider.dart
 │   │   └── cart_provider.dart
-│   ├── screens/
-│   │   ├── home_screen.dart
-│   │   ├── products_screen.dart
-│   │   ├── product_detail_screen.dart
-│   │   ├── cart_screen.dart
-│   │   ├── about_screen.dart       # 7-tap logo → admin gate
-│   │   └── admin/
-│   │       ├── admin_gate_screen.dart         # PIN entry
-│   │       ├── admin_dashboard_screen.dart    # Product list
-│   │       ├── admin_product_form_screen.dart # Add/Edit
-│   │       ├── admin_send_notification_screen.dart
-│   │       └── admin_settings_screen.dart     # Server + OneSignal config
-│   └── widgets/
-│       ├── product_card.dart  # Shows discount badge + out-of-stock overlay
-│       └── category_card.dart
+│   ├── screens/ ...
+│   └── widgets/ ...
+├── android/
+│   └── app/
+│       └── google-services.json   # Replace with your real Firebase file
 ├── server/
-│   ├── api.php          # Drop on any PHP hosting
-│   └── products.json    # Initial product data
-└── SETUP.md             # This file
+│   ├── api.php                    # Upload to Hostinger
+│   ├── send_notification.php      # Upload to Hostinger
+│   ├── products.json              # Upload to Hostinger (initial data)
+│   └── firebase-service-account.json  # Download from Firebase → upload to Hostinger (DO NOT commit to Git)
+└── SETUP.md
 ```
 
 ---
@@ -169,3 +193,22 @@ manninsuvai/
 - **Email:** manninsuvai25@gmail.com
 - **Instagram:** @manninsuvai25
 - **FSSAI:** 22426379000200 (Valid: 12-03-2031)
+
+---
+
+## Appendix: Using JSONBin.io (No Server Option)
+
+If you do **not** have your own hosting, you can use [JSONBin.io](https://jsonbin.io) (free) to store product data in the cloud. Note: push notifications still require a PHP server for `send_notification.php`.
+
+1. Create a free account at jsonbin.io.
+2. Click **Create a New Bin** → paste contents of `server/products.json` → save.
+3. Copy your **Bin ID** from the URL.
+4. Copy your **Master Key** from API Keys.
+
+In Admin Settings:
+| Field | Value |
+|---|---|
+| Use JSONBin headers | **ON** |
+| Read URL | `https://api.jsonbin.io/v3/b/YOUR_BIN_ID/latest` |
+| Write URL | `https://api.jsonbin.io/v3/b/YOUR_BIN_ID` |
+| API Key | Your Master Key |
